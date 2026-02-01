@@ -55,7 +55,7 @@ static PainelRage *instance;
         self.mainContainer.layer.cornerRadius = 10;
         self.mainContainer.layer.masksToBounds = YES;
         self.mainContainer.layer.borderWidth = 1;
-        self.mainContainer.layer.borderColor = [UIColor colorWithRed:0.0 green:0.2 blue:1.0 alpha:1.0].CGColor;
+        self.mainContainer.layer.borderColor = [UIColor colorWithRed:0.1 green:0.3 blue:1.0 alpha:1.0].CGColor;
         self.mainContainer.hidden = YES;
         [self addSubview:self.mainContainer];
         
@@ -65,7 +65,7 @@ static PainelRage *instance;
         [self.mainContainer addSubview:header];
         
         self.titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 450, 35)];
-        self.titleLabel.text = @"PAINEL RAGE @mukawx._";
+        self.titleLabel.text = @"PAINEL RAGE @MUKAWX._";
         self.titleLabel.textColor = [UIColor whiteColor];
         self.titleLabel.textAlignment = NSTextAlignmentCenter;
         self.titleLabel.font = [UIFont boldSystemFontOfSize:14];
@@ -92,8 +92,16 @@ static PainelRage *instance;
         btn.backgroundColor = [UIColor colorWithRed:0.1 green:0.3 blue:1.0 alpha:1.0];
         btn.layer.cornerRadius = 8;
         [btn setTitle:icons[i] forState:UIControlStateNormal];
+        btn.tag = i;
+        [btn addTarget:self action:@selector(tabChanged:) forControlEvents:UIControlEventTouchUpInside];
         [self.sideBar addSubview:btn];
     }
+}
+
+- (void)tabChanged:(UIButton*)sender {
+    for (UIView *v in self.contentView.subviews) [v removeFromSuperview];
+    if (sender.tag == 0) [self showRageTab];
+    else if (sender.tag == 1) [self showEspTab];
 }
 
 - (void)showRageTab {
@@ -104,27 +112,46 @@ static PainelRage *instance;
     
     // Switch Aimbot
     UISwitch *swAim = [[UISwitch alloc] initWithFrame:CGRectMake(10, 35, 0, 0)];
+    swAim.on = bAimbot;
     [swAim addTarget:self action:@selector(toggleAim:) forControlEvents:UIControlEventValueChanged];
     [self.contentView addSubview:swAim];
     
     UILabel *lAim = [[UILabel alloc] initWithFrame:CGRectMake(70, 35, 100, 30)];
-    lAim.text = @"Aimbot"; lAim.textColor = [UIColor lightGrayColor];
+    lAim.text = @"Aimbot"; lAim.textColor = [UIColor whiteColor];
     [self.contentView addSubview:lAim];
 
-    // Seletor de Ossos (Cabeça, Pescoço, Peito)
+    // Switch No Recoil (USANDO A VARIÁVEL PARA NÃO DAR ERRO)
+    UISwitch *swRec = [[UISwitch alloc] initWithFrame:CGRectMake(180, 35, 0, 0)];
+    swRec.on = bNoRecoil;
+    [swRec addTarget:self action:@selector(toggleRecoil:) forControlEvents:UIControlEventValueChanged];
+    [self.contentView addSubview:swRec];
+    
+    UILabel *lRec = [[UILabel alloc] initWithFrame:CGRectMake(240, 35, 100, 30)];
+    lRec.text = @"No Recoil"; lRec.textColor = [UIColor whiteColor];
+    [self.contentView addSubview:lRec];
+
+    // Seletor de Ossos
     UISegmentedControl *bones = [[UISegmentedControl alloc] initWithItems:@[@"Head", @"Neck", @"Chest"]];
-    bones.frame = CGRectMake(10, 80, 200, 30);
-    bones.selectedSegmentIndex = 0;
-    bones.backgroundColor = [UIColor darkGrayColor];
+    bones.frame = CGRectMake(10, 80, 250, 30);
+    bones.selectedSegmentIndex = targetBone;
     [bones addTarget:self action:@selector(boneChanged:) forControlEvents:UIControlEventValueChanged];
     [self.contentView addSubview:bones];
-    
-    // Botão Stream Mode
-    UIButton *btnStream = [UIButton buttonWithType:UIButtonTypeSystem];
-    btnStream.frame = CGRectMake(10, 130, 150, 30);
-    [btnStream setTitle:@"Stream Mode: OFF" forState:UIControlStateNormal];
-    [btnStream addTarget:self action:@selector(toggleStream:) forControlEvents:UIControlEventTouchUpInside];
-    [self.contentView addSubview:btnStream];
+}
+
+- (void)showEspTab {
+    UILabel *secTitle = [[UILabel alloc] initWithFrame:CGRectMake(10, 5, 200, 20)];
+    secTitle.text = @"🟢 Personalização ESP";
+    secTitle.textColor = [UIColor whiteColor];
+    [self.contentView addSubview:secTitle];
+
+    NSArray *options = @[@"ESP Linha", @"ESP Box", @"ESP Nome", @"ESP Distância"];
+    for (int i = 0; i < options.count; i++) {
+        UILabel *lab = [[UILabel alloc] initWithFrame:CGRectMake(10, 40 + (i*40), 150, 30)];
+        lab.text = options[i]; lab.textColor = [UIColor whiteColor];
+        [self.contentView addSubview:lab];
+        UISwitch *sw = [[UISwitch alloc] initWithFrame:CGRectMake(180, 40 + (i*40), 0, 0)];
+        [self.contentView addSubview:sw];
+    }
 }
 
 - (void)toggleMenu {
@@ -132,24 +159,19 @@ static PainelRage *instance;
     self.userInteractionEnabled = !self.mainContainer.hidden;
 }
 
-- (void)toggleStream:(UIButton*)sender {
-    bStreamMode = !bStreamMode;
-    [sender setTitle:bStreamMode ? @"Stream Mode: ON" : @"Stream Mode: OFF" forState:UIControlStateNormal];
-    // Esconde o painel de capturas de tela/vídeo
-    self.layer.sublayerTransform = bStreamMode ? CATransform3DMakeScale(0, 0, 0) : CATransform3DIdentity;
-    if (bStreamMode) { self.mainContainer.alpha = 0.1; } else { self.mainContainer.alpha = 1.0; }
-}
-
 - (void)boneChanged:(UISegmentedControl*)sender { targetBone = (int)sender.selectedSegmentIndex; }
+
+- (void)toggleRecoil:(UISwitch*)sender {
+    bNoRecoil = sender.isOn;
+    uintptr_t base = _dyld_get_image_vmaddr_slide(0);
+    *(float*)(base + ADDR_RECOIL) = bNoRecoil ? 0.0f : 1.0f;
+}
 
 - (void)toggleAim:(UISwitch*)sender {
     bAimbot = sender.isOn;
     uintptr_t base = _dyld_get_image_vmaddr_slide(0);
-    if (bAimbot) {
-        // Patch dinâmico conforme o osso
-        uint32_t op = (targetBone == 0) ? 0xD65F03C0 : (targetBone == 1 ? 0xD65F03C1 : 0xD65F03C2);
-        *(uint32_t*)(base + ADDR_AIMBOT) = op;
-    }
+    uint32_t op = (targetBone == 0) ? 0xD65F03C0 : (targetBone == 1 ? 0xD65F03C1 : 0xD65F03C2);
+    *(uint32_t*)(base + ADDR_AIMBOT) = bAimbot ? op : 0x00000000; 
 }
 
 @end
