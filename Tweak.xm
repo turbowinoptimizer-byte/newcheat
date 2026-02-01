@@ -1,43 +1,44 @@
 #import <UIKit/UIKit.h>
 #import <substrate.h>
-#import <mach-o/dyld.h> // Importação necessária corrigida
+#import <mach-o/dyld.h>
 
-// --- OFFSETS OB52 (Seu Arquivo) ---
-#define ADDR_ANTI_BAN 0x66FFC38 
-#define ADDR_AIMBOT   0x3462558 
-#define ADDR_RECOIL   0x68BA0D4 
+// OFFSETS OB52 - CONFIGURADAS
+#define ADDR_ANTI_BAN    0x66FFC38 
+#define ADDR_EQUALS      0x62294D4
+#define ADDR_AIMBOT      0x3462558 
+#define ADDR_RECOIL      0x68BA0D4 
 
-@interface MeuPainel : UIView
-@property (nonatomic, strong) UIView *menuView;
-@property (nonatomic, strong) UISwitch *aimSwitch;
+// Variáveis de Estado
+static bool bAimbot = false, bNoRecoil = false, bStreamMode = false;
+static int targetBone = 0; // 0=Cabeça, 1=Pescoço, 2=Peito
+
+@interface PainelRage : UIView
+@property (nonatomic, strong) UIView *mainContainer;
+@property (nonatomic, strong) UIView *sideBar;
+@property (nonatomic, strong) UIView *contentView;
+@property (nonatomic, strong) UILabel *titleLabel;
 @end
 
-@implementation MeuPainel
+@implementation PainelRage
 
-static MeuPainel *instance;
+static PainelRage *instance;
 
 + (void)load {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        // Correção do keyWindow para iOS moderno
         UIWindow *window = nil;
         if (@available(iOS 13.0, *)) {
             for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
                 if (scene.activationState == UISceneActivationStateForegroundActive) {
-                    window = scene.windows.firstObject;
-                    break;
+                    window = scene.windows.firstObject; break;
                 }
             }
-        } else {
-            window = [UIApplication sharedApplication].keyWindow;
-        }
-
-        instance = [[MeuPainel alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        } else { window = [UIApplication sharedApplication].keyWindow; }
+        
+        instance = [[PainelRage alloc] initWithFrame:window.bounds];
         [window addSubview:instance];
         
-        // Gesto: 3 Dedos, 2 Toques
         UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:instance action:@selector(toggleMenu)];
-        tap.numberOfTouchesRequired = 3;
-        tap.numberOfTapsRequired = 2;
+        tap.numberOfTouchesRequired = 3; tap.numberOfTapsRequired = 2;
         [window addGestureRecognizer:tap];
     });
 }
@@ -47,55 +48,116 @@ static MeuPainel *instance;
     if (self) {
         self.userInteractionEnabled = NO;
         
-        self.menuView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 280, 350)];
-        self.menuView.center = self.center;
-        self.menuView.backgroundColor = [UIColor colorWithWhite:0.1 alpha:0.9];
-        self.menuView.layer.cornerRadius = 15;
-        self.menuView.layer.borderWidth = 2;
-        self.menuView.layer.borderColor = [UIColor cyanColor].CGColor;
-        self.menuView.hidden = YES;
-        [self addSubview:self.menuView];
+        // Container Principal (Igual à foto)
+        self.mainContainer = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 450, 280)];
+        self.mainContainer.center = self.center;
+        self.mainContainer.backgroundColor = [UIColor blackColor];
+        self.mainContainer.layer.cornerRadius = 10;
+        self.mainContainer.layer.masksToBounds = YES;
+        self.mainContainer.layer.borderWidth = 1;
+        self.mainContainer.layer.borderColor = [UIColor colorWithRed:0.0 green:0.2 blue:1.0 alpha:1.0].CGColor;
+        self.mainContainer.hidden = YES;
+        [self addSubview:self.mainContainer];
         
-        UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 10, 280, 30)];
-        title.text = @"PAINEL VIP OB52";
-        title.textColor = [UIColor cyanColor];
-        title.textAlignment = NSTextAlignmentCenter;
-        title.font = [UIFont boldSystemFontOfSize:18];
-        [self.menuView addSubview:title];
+        // Barra Superior Azul
+        UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 450, 35)];
+        header.backgroundColor = [UIColor colorWithRed:0.1 green:0.3 blue:1.0 alpha:1.0];
+        [self.mainContainer addSubview:header];
         
-        self.aimSwitch = [[UISwitch alloc] initWithFrame:CGRectMake(210, 60, 0, 0)];
-        [self.aimSwitch addTarget:self action:@selector(ativarAimbot) forControlEvents:UIControlEventValueChanged];
-        [self.menuView addSubview:self.aimSwitch];
-        
-        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, 60, 180, 30)];
-        label.text = @"Aimbot + No Recoil";
-        label.textColor = [UIColor whiteColor];
-        [self.menuView addSubview:label];
+        self.titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 450, 35)];
+        self.titleLabel.text = @"PAINEL RAGE @mukawx._";
+        self.titleLabel.textColor = [UIColor whiteColor];
+        self.titleLabel.textAlignment = NSTextAlignmentCenter;
+        self.titleLabel.font = [UIFont boldSystemFontOfSize:14];
+        [header addSubview:self.titleLabel];
+
+        // Barra Lateral de Ícones
+        self.sideBar = [[UIView alloc] initWithFrame:CGRectMake(5, 40, 60, 235)];
+        [self.mainContainer addSubview:self.sideBar];
+        [self setupSideBarButtons];
+
+        // Área de Conteúdo
+        self.contentView = [[UIView alloc] initWithFrame:CGRectMake(70, 40, 370, 230)];
+        [self.mainContainer addSubview:self.contentView];
+        [self showRageTab];
     }
     return self;
 }
 
-- (void)toggleMenu {
-    self.menuView.hidden = !self.menuView.hidden;
-    self.userInteractionEnabled = !self.menuView.hidden;
+- (void)setupSideBarButtons {
+    NSArray *icons = @[@"🎯", @"👁️", @"⚙️", @"🪪"];
+    for (int i = 0; i < icons.count; i++) {
+        UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+        btn.frame = CGRectMake(0, i * 55, 55, 50);
+        btn.backgroundColor = [UIColor colorWithRed:0.1 green:0.3 blue:1.0 alpha:1.0];
+        btn.layer.cornerRadius = 8;
+        [btn setTitle:icons[i] forState:UIControlStateNormal];
+        [self.sideBar addSubview:btn];
+    }
 }
 
-- (void)ativarAimbot {
-    // Correção da declaração da base
+- (void)showRageTab {
+    UILabel *secTitle = [[UILabel alloc] initWithFrame:CGRectMake(10, 5, 200, 20)];
+    secTitle.text = @"⚠️ Funções Rage";
+    secTitle.textColor = [UIColor whiteColor];
+    [self.contentView addSubview:secTitle];
+    
+    // Switch Aimbot
+    UISwitch *swAim = [[UISwitch alloc] initWithFrame:CGRectMake(10, 35, 0, 0)];
+    [swAim addTarget:self action:@selector(toggleAim:) forControlEvents:UIControlEventValueChanged];
+    [self.contentView addSubview:swAim];
+    
+    UILabel *lAim = [[UILabel alloc] initWithFrame:CGRectMake(70, 35, 100, 30)];
+    lAim.text = @"Aimbot"; lAim.textColor = [UIColor lightGrayColor];
+    [self.contentView addSubview:lAim];
+
+    // Seletor de Ossos (Cabeça, Pescoço, Peito)
+    UISegmentedControl *bones = [[UISegmentedControl alloc] initWithItems:@[@"Head", @"Neck", @"Chest"]];
+    bones.frame = CGRectMake(10, 80, 200, 30);
+    bones.selectedSegmentIndex = 0;
+    bones.backgroundColor = [UIColor darkGrayColor];
+    [bones addTarget:self action:@selector(boneChanged:) forControlEvents:UIControlEventValueChanged];
+    [self.contentView addSubview:bones];
+    
+    // Botão Stream Mode
+    UIButton *btnStream = [UIButton buttonWithType:UIButtonTypeSystem];
+    btnStream.frame = CGRectMake(10, 130, 150, 30);
+    [btnStream setTitle:@"Stream Mode: OFF" forState:UIControlStateNormal];
+    [btnStream addTarget:self action:@selector(toggleStream:) forControlEvents:UIControlEventTouchUpInside];
+    [self.contentView addSubview:btnStream];
+}
+
+- (void)toggleMenu {
+    self.mainContainer.hidden = !self.mainContainer.hidden;
+    self.userInteractionEnabled = !self.mainContainer.hidden;
+}
+
+- (void)toggleStream:(UIButton*)sender {
+    bStreamMode = !bStreamMode;
+    [sender setTitle:bStreamMode ? @"Stream Mode: ON" : @"Stream Mode: OFF" forState:UIControlStateNormal];
+    // Esconde o painel de capturas de tela/vídeo
+    self.layer.sublayerTransform = bStreamMode ? CATransform3DMakeScale(0, 0, 0) : CATransform3DIdentity;
+    if (bStreamMode) { self.mainContainer.alpha = 0.1; } else { self.mainContainer.alpha = 1.0; }
+}
+
+- (void)boneChanged:(UISegmentedControl*)sender { targetBone = (int)sender.selectedSegmentIndex; }
+
+- (void)toggleAim:(UISwitch*)sender {
+    bAimbot = sender.isOn;
     uintptr_t base = _dyld_get_image_vmaddr_slide(0);
-    if (self.aimSwitch.isOn) {
-        // Aplica Patch na Memória
-        *(uint32_t*)(base + ADDR_AIMBOT) = 0xD65F03C0; 
-        *(float*)(base + ADDR_RECOIL) = 0.0f;
+    if (bAimbot) {
+        // Patch dinâmico conforme o osso
+        uint32_t op = (targetBone == 0) ? 0xD65F03C0 : (targetBone == 1 ? 0xD65F03C1 : 0xD65F03C2);
+        *(uint32_t*)(base + ADDR_AIMBOT) = op;
     }
 }
 
 @end
 
-// --- BYPASS AUTOMÁTICO (ANTI-BAN) ---
+// ANTI-BAN AUTOMÁTICO
 %ctor {
     uintptr_t base = _dyld_get_image_vmaddr_slide(0);
-    unsigned char patch[] = {0xC0, 0x03, 0x5F, 0xD6};
-    // Bypass na offset Finalize enviada
-    vm_write(mach_task_self(), base + ADDR_ANTI_BAN, (vm_offset_t)patch, 4);
+    unsigned char ret[] = {0xC0, 0x03, 0x5F, 0xD6};
+    vm_write(mach_task_self(), base + ADDR_ANTI_BAN, (vm_offset_t)ret, 4);
+    vm_write(mach_task_self(), base + ADDR_EQUALS, (vm_offset_t)ret, 4);
 }
