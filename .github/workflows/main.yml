@@ -8,24 +8,28 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout do seu codigo
-        uses: actions/checkout@v4 # Atualizado para v4
+      - name: Checkout do código
+        uses: actions/checkout@v4
 
-      - name: Instalar Theos (Compilador)
+      - name: Instalar Theos Manualmente
         run: |
-          export THEOS=~/theos
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          # Baixar SDKs essenciais para nao dar erro de falta de ficheiros
-          curl -ksSL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz | tar -xf - -C $THEOS/sdks/
-          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          echo "THEOS=~/theos" >> $GITHUB_ENV
+
+      - name: Instalar SDK iOS (Correção do Erro)
+        run: |
+          # Criamos a pasta de SDKs e baixamos diretamente sem usar o instalador do theos
+          mkdir -p ~/theos/sdks
+          curl -ksSL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz | tar -xf - -C ~/theos/sdks/
 
       - name: Compilar o Painel (.dylib)
         run: |
           export THEOS=~/theos
+          # Forçamos a compilação limpa
           make package FINALPACKAGE=1
           
       - name: Entregar Ficheiro Pronto
-        uses: actions/upload-artifact@v4 # AQUI ESTAVA O ERRO, AGORA ESTÁ EM V4
+        uses: actions/upload-artifact@v4
         with:
           name: Painel_Final_Download
           path: packages/*.deb
