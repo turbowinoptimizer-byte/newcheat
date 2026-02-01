@@ -1,0 +1,7 @@
+Package: com.dts.freefireth.l7
+Name: Painel Top FF OB52
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Aimbot, ESP e Anti-Ban para iOS
+Maintainer: L7Cheat
