@@ -13,7 +13,6 @@ jobs:
 
       - name: Instalar Theos e Dependencias
         run: |
-          # Instala ldid para evitar o erro 127
           brew install ldid
           git clone --recursive https://github.com/theos/theos.git ~/theos
           echo "THEOS=~/theos" >> $GITHUB_ENV
@@ -29,11 +28,14 @@ jobs:
       - name: Compilar o Painel (.dylib)
         run: |
           export THEOS=~/theos
-          # FINALPACKAGE=1 e codesign skip para garantir a dylib limpa
-          make package FINALPACKAGE=1 CODESIGN_IPA=0
+          # Compila o binário final
+          make all FINALPACKAGE=1
+          # Cria pasta para o download e move a dylib final
+          mkdir -p packages
+          cp .theos/obj/MeuPainelTop.dylib packages/
           
       - name: Entregar Ficheiro Pronto
         uses: actions/upload-artifact@v4
         with:
-          name: Painel_Final_Download
-          path: packages/*.deb
+          name: Painel_Final_Dylib
+          path: packages/MeuPainelTop.dylib
