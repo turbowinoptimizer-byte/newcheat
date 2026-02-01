@@ -11,26 +11,26 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Instalar Theos Manualmente
+      - name: Instalar Theos e Dependencias
         run: |
+          # Instala ldid para evitar o erro 127
+          brew install ldid
           git clone --recursive https://github.com/theos/theos.git ~/theos
           echo "THEOS=~/theos" >> $GITHUB_ENV
 
-      - name: Instalar SDK iOS (Versão ZIP - Mais Estável)
+      - name: Instalar SDK iOS
         run: |
           mkdir -p ~/theos/sdks
-          # Baixando SDK comprimido em ZIP para evitar erro de formato do TAR
           curl -L https://github.com/theos/sdks/archive/master.zip -o sdks.zip
           unzip -q sdks.zip
-          # Movemos apenas o SDK necessário para a pasta do Theos
           mv sdks-master/iPhoneOS14.5.sdk ~/theos/sdks/
           rm -rf sdks.zip sdks-master
 
       - name: Compilar o Painel (.dylib)
         run: |
           export THEOS=~/theos
-          make clean
-          make package FINALPACKAGE=1
+          # FINALPACKAGE=1 e codesign skip para garantir a dylib limpa
+          make package FINALPACKAGE=1 CODESIGN_IPA=0
           
       - name: Entregar Ficheiro Pronto
         uses: actions/upload-artifact@v4
