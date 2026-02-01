@@ -180,15 +180,25 @@ static void applyDesbanir(BOOL on) {
     return self;
 }
 
+// Quando o painel está fechado: toques passam para o jogo (você joga normal).
+// Quando o painel está aberto: toques ficam no painel (não move o jogo).
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    if (self.container.hidden) {
+        return nil; // painel fechado = toque vai para o jogo
+    }
+    return [super hitTest:point withEvent:event];
+}
+
 - (void)togglePanel {
-    self.userInteractionEnabled = self.container.hidden;
+    BOOL wasHidden = self.container.hidden;
+    self.userInteractionEnabled = wasHidden; // aberto = captura toques
     [UIView animateWithDuration:0.25 animations:^{
-        self.container.alpha = self.container.hidden ? 0.0 : 1.0;
-        self.container.hidden = !self.container.hidden;
+        self.container.alpha = wasHidden ? 1.0 : 0.0;
+        self.container.hidden = !wasHidden;
     } completion:^(BOOL finished) {
         if (self.container.hidden) {
             self.container.alpha = 1.0;
-            self.userInteractionEnabled = NO;
+            self.userInteractionEnabled = NO; // fechado = não captura, jogo recebe toques
         }
     }];
 }
