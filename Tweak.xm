@@ -71,7 +71,7 @@ static PainelRage *instance;
         self.titleLabel.font = [UIFont boldSystemFontOfSize:14];
         [header addSubview:self.titleLabel];
 
-        // Barra Lateral de Ícones
+        // Barra Lateral
         self.sideBar = [[UIView alloc] initWithFrame:CGRectMake(5, 40, 60, 235)];
         [self.mainContainer addSubview:self.sideBar];
         [self setupSideBarButtons];
@@ -102,6 +102,7 @@ static PainelRage *instance;
     for (UIView *v in self.contentView.subviews) [v removeFromSuperview];
     if (sender.tag == 0) [self showRageTab];
     else if (sender.tag == 1) [self showEspTab];
+    else if (sender.tag == 2) [self showSettingsTab];
 }
 
 - (void)showRageTab {
@@ -120,7 +121,7 @@ static PainelRage *instance;
     lAim.text = @"Aimbot"; lAim.textColor = [UIColor whiteColor];
     [self.contentView addSubview:lAim];
 
-    // Switch No Recoil (USANDO A VARIÁVEL PARA NÃO DAR ERRO)
+    // Switch No Recoil
     UISwitch *swRec = [[UISwitch alloc] initWithFrame:CGRectMake(180, 35, 0, 0)];
     swRec.on = bNoRecoil;
     [swRec addTarget:self action:@selector(toggleRecoil:) forControlEvents:UIControlEventValueChanged];
@@ -144,7 +145,7 @@ static PainelRage *instance;
     secTitle.textColor = [UIColor whiteColor];
     [self.contentView addSubview:secTitle];
 
-    NSArray *options = @[@"ESP Linha", @"ESP Box", @"ESP Nome", @"ESP Distância"];
+    NSArray *options = @[@"ESP Linha", @"ESP Box", @"ESP Nome"];
     for (int i = 0; i < options.count; i++) {
         UILabel *lab = [[UILabel alloc] initWithFrame:CGRectMake(10, 40 + (i*40), 150, 30)];
         lab.text = options[i]; lab.textColor = [UIColor whiteColor];
@@ -154,12 +155,34 @@ static PainelRage *instance;
     }
 }
 
+- (void)showSettingsTab {
+    UILabel *secTitle = [[UILabel alloc] initWithFrame:CGRectMake(10, 5, 200, 20)];
+    secTitle.text = @"⚙️ Configurações";
+    secTitle.textColor = [UIColor whiteColor];
+    [self.contentView addSubview:secTitle];
+
+    UILabel *lStream = [[UILabel alloc] initWithFrame:CGRectMake(10, 40, 150, 30)];
+    lStream.text = @"Stream Mode"; lStream.textColor = [UIColor whiteColor];
+    [self.contentView addSubview:lStream];
+
+    UISwitch *swStream = [[UISwitch alloc] initWithFrame:CGRectMake(180, 40, 0, 0)];
+    swStream.on = bStreamMode;
+    [swStream addTarget:self action:@selector(toggleStream:) forControlEvents:UIControlEventValueChanged];
+    [self.contentView addSubview:swStream];
+}
+
 - (void)toggleMenu {
     self.mainContainer.hidden = !self.mainContainer.hidden;
     self.userInteractionEnabled = !self.mainContainer.hidden;
 }
 
 - (void)boneChanged:(UISegmentedControl*)sender { targetBone = (int)sender.selectedSegmentIndex; }
+
+- (void)toggleStream:(UISwitch*)sender {
+    bStreamMode = sender.isOn;
+    // Otimização: Se stream mode on, reduz opacidade para dificultar detecção em captura
+    self.mainContainer.alpha = bStreamMode ? 0.05 : 1.0;
+}
 
 - (void)toggleRecoil:(UISwitch*)sender {
     bNoRecoil = sender.isOn;
@@ -171,7 +194,9 @@ static PainelRage *instance;
     bAimbot = sender.isOn;
     uintptr_t base = _dyld_get_image_vmaddr_slide(0);
     uint32_t op = (targetBone == 0) ? 0xD65F03C0 : (targetBone == 1 ? 0xD65F03C1 : 0xD65F03C2);
-    *(uint32_t*)(base + ADDR_AIMBOT) = bAimbot ? op : 0x00000000; 
+    if (bAimbot) {
+        *(uint32_t*)(base + ADDR_AIMBOT) = op;
+    }
 }
 
 @end
