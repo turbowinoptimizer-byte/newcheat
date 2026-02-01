@@ -9,7 +9,7 @@
 #define ADDR_RECOIL      0x68BA0D4 
 #define ADDR_SPEED       0x40B32E0
 
-static bool bAimbot = false, bNoRecoil = false, bStreamMode = false;
+static bool bAimbot = false, bNoRecoil = false;
 static bool bEspLinha = false, bSpeed = false;
 static CGPoint lastPoint;
 
