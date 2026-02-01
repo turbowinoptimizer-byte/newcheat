@@ -1,0 +1,32 @@
+name: Compilar Painel VIP OB52
+on: 
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Isto permite que tu cliques num botão para compilar manualmente
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout do teu codigo
+        uses: actions/checkout@v3
+
+      - name: Instalar Theos (Compilador)
+        run: |
+          export THEOS=~/theos
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # Baixar SDKs essenciais para nao dar erro de falta de ficheiros
+          curl -ksSL https://github.com/theos/sdks/raw/master/iPhoneOS14.5.sdk.tar.xz | tar -xf - -C $THEOS/sdks/
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+
+      - name: Compilar o Painel (.dylib)
+        run: |
+          export THEOS=~/theos
+          # O comando 'make' vai ler o teu Makefile e o teu Tweak.xm
+          make package FINALPACKAGE=1
+          
+      - name: Entregar Ficheiro Pronto
+        uses: actions/upload-artifact@v3
+        with:
+          name: Painel_Final_Download
+          path: packages/*.deb
