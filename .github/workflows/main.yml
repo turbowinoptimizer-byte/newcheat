@@ -2,14 +2,14 @@ name: Compilar Painel VIP OB52
 on: 
   push:
     branches: [ main ]
-  workflow_dispatch: # Isto permite que tu cliques num botão para compilar manualmente
+  workflow_dispatch: 
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
-      - name: Checkout do teu codigo
-        uses: actions/checkout@v3
+      - name: Checkout do seu codigo
+        uses: actions/checkout@v4 # Atualizado para v4
 
       - name: Instalar Theos (Compilador)
         run: |
@@ -22,11 +22,10 @@ jobs:
       - name: Compilar o Painel (.dylib)
         run: |
           export THEOS=~/theos
-          # O comando 'make' vai ler o teu Makefile e o teu Tweak.xm
           make package FINALPACKAGE=1
           
       - name: Entregar Ficheiro Pronto
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # AQUI ESTAVA O ERRO, AGORA ESTÁ EM V4
         with:
           name: Painel_Final_Download
           path: packages/*.deb
